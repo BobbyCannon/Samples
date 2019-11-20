@@ -1,0 +1,43 @@
+﻿@model Credentials
+
+@{
+	ViewBag.Title = "LogIn";
+}
+
+@using (Html.BeginForm(new { ViewBag.ReturnUrl }))
+{
+	<table style="margin: 0 auto">
+		<tr>
+			<td class="text-center">
+				@Html.TextBoxFor(m => m.EmailAddress, new Dictionary<string, object>{ { "class", "text-center" }, { "type", "email" }, { "placeholder", "email address" } })
+			</td>
+		</tr>
+		<tr>
+			<td class="text-center">
+				@Html.PasswordFor(m => m.Password, new Dictionary<string, object> { { "class", "text-center" }, { "placeholder", "password" } })
+			</td>
+		</tr>
+		<tr>
+			<td class="text-center">
+				@Html.CheckBoxFor(m => m.RememberMe)
+				@Html.LabelFor(m => m.RememberMe)
+			</td>
+		</tr>
+		<tr>
+			<td class="text-center">
+				<button id="Submit" type="submit">Log In</button>
+				@Html.AntiForgeryToken()
+			</td>
+		</tr>
+		<tr>
+			<td class="text-center">
+				@if (Context.Request.Query.ContainsKey("error"))
+				{
+					@Context.Request.Query["error"]
+				}
+				@Html.ValidationSummary()
+			</td>
+		</tr>
+
+	</table>
+}
