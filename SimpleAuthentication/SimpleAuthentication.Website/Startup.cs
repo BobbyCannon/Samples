@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SimpleAuthentication.Website.Services;
 
 #endregion
 
@@ -51,8 +52,8 @@ namespace SimpleAuthentication.Website
 			app.UseHttpsRedirection();
 			app.UseStaticFiles();
 			app.UseRouting();
-			app.UseAuthorization();
 			app.UseAuthentication();
+			app.UseAuthorization();
 			app.UseEndpoints(endpoints =>
 			{
 				endpoints.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
@@ -62,10 +63,16 @@ namespace SimpleAuthentication.Website
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices(IServiceCollection services)
 		{
-			var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
-
 			services.AddMvc(options =>
 			{
+				var policy = new AuthorizationPolicyBuilder()
+					.AddAuthenticationSchemes(
+						BasicAuthenticationHandler.AuthenticationScheme,
+						CookieAuthenticationDefaults.AuthenticationScheme
+					)
+					.RequireAuthenticatedUser()
+					.Build();
+
 				options.Filters.Add(new AuthorizeFilter(policy));
 				options.EnableEndpointRouting = false;
 			});
@@ -74,6 +81,7 @@ namespace SimpleAuthentication.Website
 			services.AddControllersWithViews();
 
 			services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+				.AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(BasicAuthenticationHandler.AuthenticationScheme, null)
 				.AddCookie(options =>
 				{
 					//options.Cookie.Name = ".ASPXAUTH";
@@ -86,6 +94,7 @@ namespace SimpleAuthentication.Website
 					options.ExpireTimeSpan = TimeSpan.FromMinutes(16384);
 					options.LoginPath = "/home/login";
 					options.LogoutPath = "/home/logout";
+					options.AccessDeniedPath = "/home/denied";
 					options.SlidingExpiration = true;
 					// this is for backward compatibility
 					//options.TicketDataFormat = new FormsAuthenticationDataFormat<AuthenticationTicket>(authenticationOptions,

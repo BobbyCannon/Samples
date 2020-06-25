@@ -1,8 +1,6 @@
 ﻿#region References
 
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -29,6 +27,8 @@ namespace SimpleAuthentication.Website.Controllers
 		public HomeController(ILogger<HomeController> logger)
 		{
 			_logger = logger;
+
+			_logger.LogCritical("HERE");
 		}
 
 		#endregion
@@ -42,13 +42,14 @@ namespace SimpleAuthentication.Website.Controllers
 			return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
 		}
 
+		[AllowAnonymous]
 		public IActionResult Index()
 		{
 			return View();
 		}
 
 		[AllowAnonymous]
-		public ActionResult LogIn(string returnUrl)
+		public IActionResult LogIn(string returnUrl)
 		{
 			if (IsAuthenticated)
 			{
@@ -61,7 +62,7 @@ namespace SimpleAuthentication.Website.Controllers
 		[HttpPost]
 		[AllowAnonymous]
 		[ValidateAntiForgeryToken]
-		public async Task<ActionResult> LogIn(Credentials model, string returnUrl)
+		public async Task<IActionResult> LogIn(Credentials model, string returnUrl)
 		{
 			if (!ModelState.IsValid)
 			{
@@ -69,26 +70,21 @@ namespace SimpleAuthentication.Website.Controllers
 				return View(model);
 			}
 
-			var accountService = new AccountService();
-			var user = accountService.AuthenticateUser(model);
+			var account = BasicAuthenticationHandler.Validate(model);
 
-			if (user == null)
+			if (account == null)
 			{
 				ModelState.AddModelError("userName", Constants.LoginInvalidError);
 				return View(model);
 			}
 
-			var claims = new List<Claim> { new Claim(ClaimTypes.Name, user) };
-			var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-			await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
-				new ClaimsPrincipal(claimsIdentity),
-				new AuthenticationProperties { IsPersistent = model.RememberMe });
+			var ticket = BasicAuthenticationHandler.CreateTicket(account, model.RememberMe, CookieAuthenticationDefaults.AuthenticationScheme);
+			await HttpContext.SignInAsync(ticket.Principal, ticket.Properties);
 
 			return Redirect(string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl);
 		}
 
-		public async Task<ActionResult> LogOut()
+		public async Task<IActionResult> LogOut()
 		{
 			await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 			return Redirect("/");
